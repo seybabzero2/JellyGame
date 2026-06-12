@@ -19,12 +19,17 @@ public abstract class BaseObstacle : MonoBehaviour
 
     private void CheckBounds()
     {
-        if (transform.position.z < destroyZPosition)
+        float distanceToPlayer = Vector3.Distance(transform.position, JellyController.Instance.transform.position);
+        Vector3 directionToPlayer = JellyController.Instance.transform.position - transform.position;
+        Vector3 movementDirection = -LevelManager.Instance.currentDirection; 
+
+        bool isBehind = Vector3.Dot(directionToPlayer, movementDirection) < 0;
+
+        if (isBehind && distanceToPlayer > Mathf.Abs(destroyZPosition))
         {
             OnDespawn();
-            LevelManager.Instance.ReturnToPool(gameObject, poolIndex); 
+            LevelManager.Instance.ReturnToPool(gameObject, poolIndex);
         }
     }
-
     protected virtual void OnDespawn() { }
 }

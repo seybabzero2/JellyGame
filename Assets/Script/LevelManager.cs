@@ -13,6 +13,9 @@ public class LevelManager : MonoBehaviour
 {
     public static LevelManager Instance { get; private set; }
 
+    [Header("Direction Settings")]
+public Vector3 currentDirection = Vector3.forward; 
+
     [Header("Global Speed Settings")]
     public float currentSpeed = 15f;
     public float speedIncreaseRate = 0.5f;
@@ -77,12 +80,16 @@ public class LevelManager : MonoBehaviour
             obs.GetComponent<BaseObstacle>().poolIndex = randomType; 
         }
 
-        obs.transform.position = new Vector3(0f, 0f, spawnZPosition);
-        obs.transform.localScale = Vector3.one * randomScale;
+        obs.transform.position = currentDirection * spawnZPosition;
+        obs.transform.rotation = Quaternion.LookRotation(currentDirection);
 
         ShapeObstacle shapeComp = obs.GetComponent<ShapeObstacle>();
-        shapeComp.holeWidth = variants[randomType].baseWidth * randomScale;
-        shapeComp.holeHeight = variants[randomType].baseHeight * randomScale;
+    
+        if (shapeComp != null)
+        {
+            shapeComp.holeWidth = variants[randomType].baseWidth * randomScale;
+            shapeComp.holeHeight = variants[randomType].baseHeight * randomScale;
+        }
 
         obs.SetActive(true);
     }
@@ -91,5 +98,50 @@ public class LevelManager : MonoBehaviour
     {
         obs.SetActive(false);
         pools[typeIndex].Enqueue(obs);
+    }
+
+    public Transform playerRig; 
+
+private void ClearOldObstacles(TurnObstacle exceptionTurn)
+{
+    BaseObstacle[] activeObstacles = FindObjectsByType<BaseObstacle>(FindObjectsSortMode.None);
+
+    foreach (BaseObstacle obs in activeObstacles)
+    {
+        if (obs == exceptionTurn)
+        {
+            continue;
+        }
+
+        ReturnToPool(obs.gameObject, obs.poolIndex);
+    }
+}
+
+   public void ExecuteWorldTurn(bool isLeftTurn, TurnObstacle currentTurn)
+    {
+        float angle = isLeftTurn ? -90f : 90f;
+        currentDirection = Quaternion.Euler(0, angle, 0) * currentDirection;
+
+        ClearOldObstacles(currentTurn);
+
+        Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(1.0f, 0.3f);
+        
+        StartCoroutine(RotateRig(angle));
+    }
+
+    private System.Collections.IEnumerator RotateRig(float angle)
+    {
+        Quaternion startRot = playerRig.rotation;
+        Quaternion endRot = startRot * Quaternion.Euler(0, angle, 0);
+        float time = 0;
+        float duration = 0.2f; 
+
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+            playerRig.rotation = Quaternion.Slerp(startRot, endRot, time / duration);
+            yield return null;
+        }
+        playerRig.rotation = endRot;
     }
 }

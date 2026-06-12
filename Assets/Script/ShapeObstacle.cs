@@ -20,8 +20,9 @@ public class ShapeObstacle : BaseObstacle
 
     private void CheckPassage()
     {
-        float playerZ = JellyController.Instance.transform.position.z;
-        if (Mathf.Abs(transform.position.z - playerZ) < 0.5f)
+        float dist = Vector3.Distance(transform.position, JellyController.Instance.transform.position);
+
+        if (dist < 0.5f)
         {
             hasBeenChecked = true;
             float currentJellyHeight = JellyController.Instance.CurrentHeight;
@@ -35,6 +36,7 @@ public class ShapeObstacle : BaseObstacle
             else
             {
                 Debug.Log("<color=red>FAIL!</color>");
+                Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(10f, 0.2f);
             }
         }
     }
