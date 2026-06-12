@@ -6,9 +6,26 @@ using Unity.Burst;
 
 public class JellyController : MonoBehaviour
 {
+    public static JellyController Instance { get; private set; }
+    private void Awake()
+    {
+        if (Instance != null && Instance != this) 
+        { 
+            Destroy(this); 
+        } 
+        else 
+        { 
+            Instance = this; 
+        } 
+    }
+
     [Header("Jelly Squeeze Settings")]
     public float influenceRadius = 1.5f;
     public float pressForce = 0.5f;
+
+    [Header("Jelly State (Read Only)")]
+    public float CurrentHeight { get; private set; } = 1.0f;
+    public float CurrentWidth { get; private set; } = 1.0f;
 
     private NativeArray<Vector3> baseVertices;
     private NativeArray<Vector3> currentVertices;
@@ -48,21 +65,6 @@ public class JellyController : MonoBehaviour
 
     public void Update()
     {
-        JellyPhysicsJob jobData;
-
-        jobData.baseVertices = baseVertices;
-        jobData.currentVertices = currentVertices;
-        jobData.previousVertices = previousVertices;
-        jobData.time = Time.time;
-        jobData.ySeed = ySeed;
-        jobData.damping = damping;
-        jobData.stiffness = stiffness;
-        jobData.deltaTime = Time.deltaTime;
-        
-
-        JobHandle handle = jobData.Schedule(mesh.vertexCount, 64);
-        handle.Complete();
-
         Vector3 targetScale = new Vector3(1.0f, 1.0f, 1.0f);
         if (UnityEngine.InputSystem.Keyboard.current.upArrowKey.isPressed) 
         {
@@ -73,25 +75,38 @@ public class JellyController : MonoBehaviour
             targetScale = new Vector3(2.0f, 0.5f, 2.0f);
         }
 
-        Matrix4x4 scaleMatrix = Matrix4x4.Scale(targetScale);
+        CurrentHeight = targetScale.y;
+        CurrentWidth = targetScale.x; 
 
+        Matrix4x4 scaleMatrix = Matrix4x4.Scale(targetScale);
         for (int i = 0; i < vertices.Length; i++)
         {
             baseVertices[i] = scaleMatrix.MultiplyPoint3x4(vertices[i]);
         }
+
+        JellyPhysicsJob jobData;
+        jobData.baseVertices = baseVertices;
+        jobData.currentVertices = currentVertices;
+        jobData.previousVertices = previousVertices;
+        jobData.time = Time.time;
+        jobData.ySeed = ySeed;
+        jobData.damping = damping;
+        jobData.stiffness = stiffness;
+        jobData.deltaTime = Time.deltaTime;
+
+        JobHandle physicsHandle = jobData.Schedule(mesh.vertexCount, 64);
 
         JellyNormalsJob normalsJob;
         normalsJob.vertices = currentVertices;
         normalsJob.triangles = triangles;
         normalsJob.normals = normals;
 
-        JobHandle normalsHandle = normalsJob.Schedule(handle);
+        JobHandle normalsHandle = normalsJob.Schedule(physicsHandle);
+
         normalsHandle.Complete();
 
         mesh.SetVertices(currentVertices);
-        mesh.RecalculateNormals();
-
-
+        mesh.SetNormals(normals); 
     }
         
     public void OnDestroy() {
