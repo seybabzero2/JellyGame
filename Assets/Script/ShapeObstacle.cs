@@ -25,18 +25,31 @@ public class ShapeObstacle : BaseObstacle
         if (dist < 0.5f)
         {
             hasBeenChecked = true;
+            
             float currentJellyHeight = JellyController.Instance.CurrentHeight;
             float currentJellyWidth = JellyController.Instance.CurrentWidth;
-            float tolerance = 0.2f;
 
-            if (currentJellyHeight <= holeHeight + tolerance && currentJellyWidth <= holeWidth + tolerance)
+            // --- СЕНЬЙОРНИЙ БАЛАНС ТОЛЕРАНТНОСТІ ---
+            // Збільшуємо запас до 0.350f. Це компенсує пружину желе (коли воно 2.05 замість 2.0)
+            // і прощає гравцю, якщо він став, наприклад, 1.9 чи 0.6 через недотискання.
+            float tolerance = 0.35f;
+
+            // Перевіряємо, чи втиснувся гравець у габарити дірки з урахуванням похибки пружини
+            bool heightFits = currentJellyHeight <= (holeHeight + tolerance);
+            bool widthFits = currentJellyWidth <= (holeWidth + tolerance);
+
+            if (heightFits && widthFits)
             {
                 Debug.Log("<color=green>SUCCESS!</color>");
+                Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(0.6f, 0.2f);
             }
             else
             {
                 Debug.Log("<color=red>FAIL!</color>");
-                Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(10f, 0.2f);
+                Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(2.0f, 1.0f);
+
+                // ВИКЛИК МИГАННЯ UI
+                ScreenFlash.Instance?.TriggerRedFlash();
             }
         }
     }

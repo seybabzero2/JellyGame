@@ -57,8 +57,10 @@ private void TryExecuteTurn(bool inputLeft)
     {
         Debug.Log("<color=red>WRONG WAY!</color>");
         hasTurned = true; 
+        Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(2f, 0.5f);
 
-        Camera.main.GetComponent<CameraFollow>()?.AddShakeImpulse(10.0f, 1.0f);
+        // ВИКЛИК МИГАННЯ UI
+        ScreenFlash.Instance?.TriggerRedFlash();
     }
 }
 }
